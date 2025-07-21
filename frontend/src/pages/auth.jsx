@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AuthService } from '../auth.js';
+import { useNavigate } from 'react-router-dom';
+import Error from '../components/error.jsx';
+import Toast from '../components/toast.jsx';
 
 const AuthPage = () => {
+  const authService = new AuthService();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [showError, setShowError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('success');
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [error, setError] = useState({ show: false, message: '' });
+  // const [showError, setShowError] = useState(false);
+  // const [errorMessage, setErrorMessage] = useState('');
+  // const [showToast, setShowToast] = useState(false);
+  // const [toastMessage, setToastMessage] = useState('');
+  // const [toastType, setToastType] = useState('success');
+  const navigate = useNavigate();
 
   // Single form state
   const [formData, setFormData] = useState({
@@ -49,23 +57,21 @@ const AuthPage = () => {
   };
 
   const handleLogin = async (e) => {
+    // setToast({ show: true, message: 'Logging in...', type: 'success' });
     e.preventDefault();
     if (!validateForm(true)) return;
 
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Dummy authentication logic
-      if (formData.email === 'test@example.com' && formData.password === 'password') {
-        showToastMessage('Successfully logged in!', 'success');
-      } else {
-        throw new Error('Invalid credentials');
-      }
+      const response = await authService.login({email: formData.email, password: formData.password}); 
+      setToast({ show: true, message: 'Logged in successfully!', type: 'success' });
+      console.log(response);
+      // showToastMessage('Logged in successfully!', 'success');
+      navigate('/generate');
     } catch (error) {
-      setErrorMessage(error.message);
-      setShowError(true);
+      // setErrorMessage(error.message);
+      // setShowError(true);
+      setError({ show: true, message: error.message });
     } finally {
       setIsLoading(false);
     }
@@ -77,25 +83,28 @@ const AuthPage = () => {
 
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Dummy registration logic
-      showToastMessage('Account created successfully!', 'success');
+        const response = await authService.createAccount({email: formData.email, name: formData.name, password: formData.password}); 
+        console.log(response);
+        // showToastMessage('Account created successfully!', 'success');
+        setToast({ show: true, message: 'Account created successfully!', type: 'success' });
+        navigate('/generate');
+
     } catch (error) {
-      setErrorMessage(error.message);
-      setShowError(true);
+      // setErrorMessage(error.message);
+      // setShowError(true);
+      setError({ show: true, message: error.message });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const showToastMessage = (message, type = 'success') => {
-    setToastMessage(message);
-    setToastType(type);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-  };
+  // const showToastMessage = (message, type = 'success') => {
+  //   // setToastMessage(message);
+  //   // setToastType(type);
+  //   // setShowToast(true);
+  //   // setTimeout(() => setShowToast(false), 3000);
+  //   Toast.show(true, message, type);
+  // };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -167,10 +176,17 @@ const AuthPage = () => {
     }
   };
 
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => setToast(t => ({ ...t, show: false })), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
+
   return (
     <div className="min-h-screen bg-[#0D1117] flex items-center justify-center p-4">
       {/* Toast Notification */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {showToast && (
           <motion.div
             initial={{ opacity: 0, y: -50 }}
@@ -183,10 +199,10 @@ const AuthPage = () => {
             {toastMessage}
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
 
       {/* Error Modal */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {showError && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -215,7 +231,7 @@ const AuthPage = () => {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
 
       {/* Main Container */}
       <motion.div
@@ -224,6 +240,14 @@ const AuthPage = () => {
         animate="visible"
         className="w-full max-w-6xl mx-auto"
       >
+                      <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => authService.logout()}
+                className="w-full bg-[#2F80ED] text-white py-2 px-4 rounded-lg font-medium"
+              >
+                Logout Test
+              </motion.button>
         {/* Card Container */}
         <div className="relative overflow-hidden bg-[#161B22] rounded-2xl border border-[#30363D] shadow-2xl">
           <div className="flex relative">
@@ -542,6 +566,8 @@ const AuthPage = () => {
           </div>
         </div>
       </motion.div>
+      <Toast show={toast.show} message={toast.message} type={toast.type} />
+      <Error show={error.show} message={error.message} />
     </div>
   );
 };
